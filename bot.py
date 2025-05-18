@@ -9,6 +9,26 @@ def send_telegram(message, token, chat_id):
     data = {"chat_id": chat_id, "text": message}
     requests.post(url, data=data)
 
+def place_order(obj, variety, tradingsymbol, symboltoken, transactiontype,
+                exchange, producttype, duration, price, quantity, price_type):
+    try:
+        orderparams = {
+            "variety": variety,
+            "tradingsymbol": tradingsymbol,
+            "symboltoken": symboltoken,
+            "transactiontype": transactiontype,
+            "exchange": exchange,
+            "producttype": producttype,
+            "duration": duration,
+            "price": price,
+            "quantity": quantity,
+            "pricetype": price_type
+        }
+        response = obj.placeOrder(orderparams)
+        return response
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 def run_bot():
     api_key = os.getenv("API_KEY")
     client_id = os.getenv("CLIENT_ID")
@@ -42,19 +62,48 @@ def run_bot():
         session = obj.generateSession(client_id, pin, totp)
         print("✅ Logged into SmartAPI")
 
-        # Example: Get LTP of RELIANCE
+        # Get LTP of RELIANCE
         ltp_data = obj.ltpData('NSE', 'RELIANCE-EQ', 'RELIANCE')
         ltp = ltp_data['data']['ltp']
         print(f"📈 RELIANCE LTP: ₹{ltp}")
 
-        # Simple strategy: Buy if LTP < ₹2500
+        # Buy if LTP < 2500
         if ltp < 2500:
-            msg = f"✅ BUY Signal: RELIANCE is at ₹{ltp}"
-        else:
-            msg = f"ℹ️ No trade. RELIANCE is at ₹{ltp}"
+            # Find RELIANCE token to place order
+            instruments = obj.getMaster("NSE")['data']
+            reliance_token = None
+            for instrument in instruments:
+                if instrument['symbol'] == 'RELIANCE' and instrument['exchange'] == 'NSE':
+                    reliance_token = instrument['token']
+                    break
 
-        print("📨 Sending Telegram message...")
-        send_telegram(msg, telegram_token, telegram_chat_id)
+            if reliance_token is None:
+                msg = "❌ Could not find RELIANCE token for placing order"
+                print(msg)
+                send_telegram(msg, telegram_token, telegram_chat_id)
+                return
+
+            print("🔄 Placing BUY order for RELIANCE...")
+            order_response = place_order(
+                obj=obj,
+                variety="NORMAL",
+                tradingsymbol="RELIANCE",
+                symboltoken=reliance_token,
+                transactiontype="BUY",
+                exchange="NSE",
+                producttype="INTRADAY",
+                duration="DAY",
+                price=0,             # Market order
+                quantity=1,
+                price_type="MARKET"
+            )
+
+            print(f"📝 Order Response: {order_response}")
+            send_telegram(f"✅ BUY order placed: {order_response}", telegram_token, telegram_chat_id)
+        else:
+            msg = f"ℹ️ No BUY signal. RELIANCE price at ₹{ltp}"
+            print(msg)
+            send_telegram(msg, telegram_token, telegram_chat_id)
 
     except Exception as e:
         print("❌ Error:", str(e))
