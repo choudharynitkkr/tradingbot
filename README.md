@@ -1,0 +1,2 @@
+# tradingbot
+my intraday stratgy
