@@ -2,7 +2,14 @@ import datetime
 import os
 
 api_key = os.getenv("API_KEY")
-api_secret = os.getenv("API_SECRET")
+client_id = os.getenv("CLIENT_ID")
+pin = os.getenv("PIN")
+totp_token = os.getenv("TOTPTOKEN")  # Optional, can be None
+telegram_token = os.getenv("TELEGRAM_TOKEN")
+telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+# Example usage:
+print(f"Using API key: {api_key}")
 
 def run_bot():
     now = datetime.datetime.now()
