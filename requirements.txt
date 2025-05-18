@@ -3,3 +3,6 @@ numpy
 ta
 requests
 python-dotenv
+smartapi-python
+pyotp
+requests
